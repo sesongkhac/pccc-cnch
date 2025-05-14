@@ -1,0 +1,7 @@
+fastapi==0.95.0
+pydantic==1.10.13
+uvicorn
+requests
+numpy
+python-multipart
+exceptiongroup
