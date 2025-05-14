@@ -1,38 +1,22 @@
-# qa_engine.py
+from typing import List
+from sentence_transformers import SentenceTransformer, util
 
-import requests
-import config
-import numpy as np
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
-documents = []
+documents: List[str] = []
+document_embeddings = None
 
-def add_document(text):
-    documents.append(text)
+def upload_document(content: str):
+    global documents, document_embeddings
+    documents.append(content)
+    document_embeddings = model.encode(documents, convert_to_tensor=True)
+    return {"status": "uploaded", "total_documents": len(documents)}
 
-def embed_text(text):
-    headers = {"Authorization": f"Bearer {config.HUGGINGFACE_API_TOKEN}"}
-    response = requests.post(
-        config.HUGGINGFACE_EMBEDDING_API_URL,
-        headers=headers,
-        json={"inputs": text}
-    )
-    return response.json()
+def search_answer(question: str):
+    if not documents:
+        return "Không có tài liệu nào để tìm kiếm."
 
-def cosine_similarity(vec1, vec2):
-    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
-def search_documents(question, top_k=3):
-    question_embedding = embed_text(question)
-    if not question_embedding or "error" in question_embedding:
-        return ["Không tìm thấy embedding."]
-    
-    similarities = []
-    for doc in documents:
-        doc_embedding = embed_text(doc)
-        if doc_embedding and "error" not in doc_embedding:
-            sim = cosine_similarity(question_embedding, doc_embedding)
-            similarities.append((sim, doc))
-    
-    similarities.sort(reverse=True)
-    top_docs = [doc for _, doc in similarities[:top_k]]
-    return top_docs
+    question_embedding = model.encode(question, convert_to_tensor=True)
+    scores = util.cos_sim(question_embedding, document_embeddings)[0]
+    best_idx = int(scores.argmax())
+    return documents[best_idx]

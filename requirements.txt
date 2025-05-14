@@ -1,7 +1,5 @@
 fastapi
-pydantic
 uvicorn
-requests
-numpy
-python-multipart
-exceptiongroup
+sentence-transformers
+torch
+pydantic
