@@ -1,50 +1,39 @@
-# main.py
-
 from fastapi import FastAPI, Request
-from qa_engine import add_document, search_documents
-import requests
-import config
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# Nếu bạn có thêm file riêng xử lý tài liệu, bạn cũng import ở đây
+from qa_engine import search_answer, upload_document
 
 app = FastAPI()
+
+# Bật CORS cho tất cả các domain
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Hoặc liệt kê domain cụ thể ["https://your-frontend.up.railway.app"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Model cho /upload
+class UploadRequest(BaseModel):
+    content: str
+
+# Model cho /ask
+class QuestionRequest(BaseModel):
+    question: str
 
 @app.get("/")
 async def root():
     return {"message": "Simple Document Q&A Bot running."}
 
 @app.post("/upload")
-async def upload_document(request: Request):
-    data = await request.json()
-    content = data.get("content", "")
-    if content:
-        add_document(content)
-        return {"status": "Document added."}
-    else:
-        return {"status": "No content received."}
+async def upload(req: UploadRequest):
+    result = upload_document(req.content)
+    return {"message": "Document uploaded successfully.", "result": result}
 
 @app.post("/ask")
-async def ask_question(request: Request):
-    data = await request.json()
-    question = data.get("question", "")
-    if not question:
-        return {"answer": "Bạn chưa nhập câu hỏi."}
-    
-    contexts = search_documents(question)
-    context = "\n".join(contexts)
-
-    headers = {"Authorization": f"Bearer {config.HUGGINGFACE_API_TOKEN}"}
-    payload = {
-        "inputs": {
-            "question": question,
-            "context": context
-        }
-    }
-    response = requests.post(
-        config.HUGGINGFACE_ANSWERING_API_URL,
-        headers=headers,
-        json=payload
-    )
-
-    if response.ok:
-        return {"answer": response.json().get("answer", "Không tìm thấy câu trả lời.")}
-    else:
-        return {"answer": "Không thể lấy câu trả lời từ mô hình."}
+async def ask(req: QuestionRequest):
+    answer = search_answer(req.question)
+    return {"answer": answer}
