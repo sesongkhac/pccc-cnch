@@ -1,26 +1,22 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Nếu bạn có thêm file riêng xử lý tài liệu, bạn cũng import ở đây
-from qa_engine import search_answer, upload_document
+from qa_engine import upload_document, search_answer
 
 app = FastAPI()
 
-# Bật CORS cho tất cả các domain
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Hoặc liệt kê domain cụ thể ["https://your-frontend.up.railway.app"]
+    allow_origins=["*"],  # Cho tất cả domain frontend kết nối
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Model cho /upload
 class UploadRequest(BaseModel):
     content: str
 
-# Model cho /ask
 class QuestionRequest(BaseModel):
     question: str
 
